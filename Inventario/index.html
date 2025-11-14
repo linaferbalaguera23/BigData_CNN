@@ -187,7 +187,7 @@
             displayCounts(classes);
         }
 
-        // --- 4. Post-procesamiento ---
+        // --- 4. Post-procesamiento (CON CORRECCIÓN DE NMS) ---
         function processOutput(boxes, originalWidth, originalHeight) {
             const validBoxes = [];
             const validScores = [];
@@ -213,7 +213,7 @@
                     }
                 }
                 
-                // Aplicar confianza de clase (si el modelo lo soporta)
+                // Aplicar confianza de clase
                 const finalScore = score * maxClassScore;
                 
                 if (finalScore < scoreThreshold) continue;
@@ -234,7 +234,14 @@
                 validScores.push(finalScore);
                 validClasses.push(classId);
             }
-            
+
+            // --- ¡LA CORRECCIÓN ESTÁ AQUÍ! ---
+            // Si no encontramos ninguna caja que supere el umbral,
+            // no podemos ejecutar NMS. Devolvemos listas vacías.
+            if (validBoxes.length === 0) {
+                return [[], [], []];
+            }
+
             // Non-Max Suppression (NMS) para eliminar cajas duplicadas
             const nmsResult = tf.image.nonMaxSuppression(
                 validBoxes,
