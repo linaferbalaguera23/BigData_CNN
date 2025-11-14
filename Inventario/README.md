@@ -1,4 +1,4 @@
-# Nombre: Lina Fernanda Rodríguez Balaguera, Código: 20252695007
+# Nombre: Lina Fernanda Rodriguez Balaguera, Codigo: 20252695007
 
 ## Proyecto Final: Inventario de Salón de Cómputo
 
