@@ -1,0 +1,25 @@
+description: Ultralytics best model trained on /content/models/research/Big-data-5-1/data.yaml
+author: Ultralytics
+date: '2025-11-14T21:24:01.578818'
+version: 8.3.228
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: CPU
+  1: Mesa
+  2: Mouse
+  3: Pantalla
+  4: Silla
+  5: Teclado
+args:
+  batch: 1
+  half: false
+  int8: false
+  nms: false
+channels: 3
