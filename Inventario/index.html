@@ -154,14 +154,20 @@
             const predictions = await model.executeAsync(inputTensor);
             
             // Post-procesamiento
-            const output = predictions.squeeze(); // Eliminar la dimensión del batch
-            const boxes = await output.array(); // [num_boxes, 84] (para YOLOv8)
+            const output = predictions.squeeze(); // Shape [84, 8400]
+            
+            // --- ¡LA LÍNEA CORREGIDA ESTÁ AQUÍ! ---
+            // Necesitamos transponer la salida para que sea [8400, 84]
+            const transposed_output = output.transpose(); // Shape [8400, 84]
+            
+            const boxes = await transposed_output.array();
 
             tfImg.dispose();
             resized.dispose();
             inputTensor.dispose();
             predictions.dispose();
             output.dispose();
+            transposed_output.dispose(); // Limpiar el nuevo tensor
 
             const [detectedBoxes, scores, classes] = processOutput(boxes, originalWidth, originalHeight);
             
