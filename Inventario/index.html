@@ -104,9 +104,18 @@
         const modelPath = 'best_web_model/model.json';
         const scoreThreshold = 0.5; // Confianza mínima para mostrar un objeto (puedes ajustarlo)
 
-        // --- 1. Cargar el Modelo ---
+        // --- 1. Cargar el Modelo (CON FORZADO DE GPU) ---
         let model;
         (async () => {
+            console.log("Iniciando TensorFlow.js...");
+            
+            // --- ¡AÑADIDO! ---
+            // Forzamos el backend a WebGL (usar la GPU)
+            await tf.setBackend('webgl');
+            await tf.ready(); // Esperamos a que la GPU esté lista
+            
+            console.log("Backend actual:", tf.getBackend()); // Verificación
+
             console.log("Cargando modelo...");
             model = await tf.loadGraphModel(modelPath);
             console.log("Modelo cargado exitosamente.");
