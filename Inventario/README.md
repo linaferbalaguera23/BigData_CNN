@@ -1,7 +1,7 @@
-ESTUDIANTE: Lina Fernanda Rodriguez Balaguera
-CÓDIGO: 20252695007
+# ESTUDIANTE: Lina Fernanda Rodriguez Balaguera
+# CÓDIGO: 20252695007
 
-# Proyecto Final: Inventario de Salón de Cómputo
+## Proyecto Final: Inventario de Salón de Cómputo
 
 Este proyecto es una aplicación web (`index.html`) que utiliza un modelo de *deep learning* para detectar y contar 6 tipos de objetos en un salón de cómputo. La predicción se ejecuta 100% local en el navegador usando TensorFlow.js.
 
