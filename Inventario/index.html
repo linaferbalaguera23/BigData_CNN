@@ -187,7 +187,7 @@
             displayCounts(classes);
         }
 
-        // --- 4. Post-procesamiento (CON CORRECCIÓN DE NMS) ---
+        // --- 4. Post-procesamiento (VERSIÓN CORREGIDA FINAL) ---
         function processOutput(boxes, originalWidth, originalHeight) {
             const validBoxes = [];
             const validScores = [];
@@ -196,28 +196,34 @@
             const scaleX = originalWidth / 640;
             const scaleY = originalHeight / 640;
 
+            // 'boxes' tiene la forma [8400, 10] (4 de caja + 6 de clases)
             for (let i = 0; i < boxes.length; i++) {
                 const boxData = boxes[i];
-                const score = boxData[4]; // La puntuación de confianza del objeto
-
-                if (score < scoreThreshold) continue;
-
-                let classId = -1;
+                
+                // --- LÓGICA CORREGIDA ---
+                // No hay 'objectness score'. Simplemente encontramos
+                // la clase con el puntaje más alto.
+                
                 let maxClassScore = 0;
+                let classId = -1;
 
-                // Encontrar la clase con la puntuación más alta (YOLOv8)
-                for (let j = 5; j < boxData.length; j++) {
+                // Las clases empiezan en el índice 4
+                for (let j = 4; j < boxData.length; j++) {
                     if (boxData[j] > maxClassScore) {
                         maxClassScore = boxData[j];
-                        classId = j - 5;
+                        classId = j - 4; // j=4 -> id=0, j=5 -> id=1, etc.
                     }
                 }
-                
-                // Aplicar confianza de clase
-                const finalScore = score * maxClassScore;
-                
-                if (finalScore < scoreThreshold) continue;
 
+                // Usamos el 'scoreThreshold' que definimos (0.25)
+                // Si el mejor puntaje de clase no es suficiente, lo descartamos.
+                if (maxClassScore < scoreThreshold) {
+                    continue;
+                }
+                
+                // Si llegamos aquí, ¡es una detección válida!
+                const finalScore = maxClassScore;
+                
                 // Coordenadas [cx, cy, w, h]
                 const cx = boxData[0] * scaleX;
                 const cy = boxData[1] * scaleY;
@@ -235,9 +241,9 @@
                 validClasses.push(classId);
             }
 
-            // --- ¡LA CORRECCIÓN ESTÁ AQUÍ! ---
-            // Si no encontramos ninguna caja que supere el umbral,
-            // no podemos ejecutar NMS. Devolvemos listas vacías.
+            // --- FIN DE LA LÓGICA CORREGIDA ---
+
+            // Si no encontramos ninguna caja, devolvemos listas vacías.
             if (validBoxes.length === 0) {
                 return [[], [], []];
             }
