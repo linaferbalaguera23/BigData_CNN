@@ -149,7 +149,7 @@
             reader.readAsDataURL(file);
         }
 
-       // --- 3. Ejecutar la Inferencia (La Magia) ---
+      // --- 3. Ejecutar la Inferencia (La Magia) ---
         async function runPrediction(img) {
             const tfImg = tf.browser.fromPixels(img);
             const originalWidth = tfImg.shape[1];
@@ -243,36 +243,6 @@
                 10,    // max_output_size
                 0.5,   // iou_threshold
                 scoreThreshold // <-- ¡Y AQUÍ SE USA LA VARIABLE!
-            );
-
-            const nmsIndices = nmsResult.arraySync();
-            
-            const finalBoxes = [];
-            const finalScores = [];
-            const finalClasses = [];
-
-            for (const index of nmsIndices) {
-                finalBoxes.push(validBoxes[index]);
-                finalScores.push(validScores[index]);
-                finalClasses.push(validClasses[index]);
-            }
-
-            return [finalBoxes, finalScores, finalClasses];
-        }
-            // --- FIN DE LA LÓGICA CORREGIDA ---
-
-            // Si no encontramos ninguna caja, devolvemos listas vacías.
-            if (validBoxes.length === 0) {
-                return [[], [], []];
-            }
-
-            // Non-Max Suppression (NMS)
-            const nmsResult = await tf.image.nonMaxSuppressionAsync(
-                validBoxes,
-                validScores,
-                10,    // max_output_size
-                0.5,   // iou_threshold
-                scoreThreshold // 
             );
 
             const nmsIndices = nmsResult.arraySync();
