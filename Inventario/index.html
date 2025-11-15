@@ -149,13 +149,13 @@
             reader.readAsDataURL(file);
         }
 
-        // --- 3. Ejecutar la Inferencia (La Magia) ---
+       // --- 3. Ejecutar la Inferencia (La Magia) ---
         async function runPrediction(img) {
             const tfImg = tf.browser.fromPixels(img);
             const originalWidth = tfImg.shape[1];
             const originalHeight = tfImg.shape[0];
 
-            // Pre-procesamiento: Redimensionar a 640x640 y normalizar
+            // Pre-procesamiento
             const resized = tf.image.resizeBilinear(tfImg, [640, 640]);
             const inputTensor = resized.expandDims(0).div(255.0);
 
@@ -163,12 +163,8 @@
             const predictions = await model.executeAsync(inputTensor);
             
             // Post-procesamiento
-            const output = predictions.squeeze(); // Shape [84, 8400]
-            
-            // --- ¡LA LÍNEA CORREGIDA ESTÁ AQUÍ! ---
-            // Necesitamos transponer la salida para que sea [8400, 84]
-            const transposed_output = output.transpose(); // Shape [8400, 84]
-            
+            const output = predictions.squeeze();
+            const transposed_output = output.transpose(); 
             const boxes = await transposed_output.array();
 
             tfImg.dispose();
@@ -176,9 +172,11 @@
             inputTensor.dispose();
             predictions.dispose();
             output.dispose();
-            transposed_output.dispose(); // Limpiar el nuevo tensor
+            transposed_output.dispose();
 
-            const [detectedBoxes, scores, classes] = processOutput(boxes, originalWidth, originalHeight);
+            // --- ¡AQUÍ SE AÑADE 'await'! ---
+            // Esto es necesario porque processOutput ahora es async
+            const [detectedBoxes, scores, classes] = await processOutput(boxes, originalWidth, originalHeight);
             
             // Dibujar resultados
             drawResults(img, detectedBoxes, scores, classes);
@@ -187,8 +185,10 @@
             displayCounts(classes);
         }
 
-        // --- 4. Post-procesamiento (VERSIÓN CORREGIDA FINAL) ---
-        function processOutput(boxes, originalWidth, originalHeight) {
+        // --- 4. Post-procesamiento (VERSIÓN FINAL ASÍNCRONA Y CORREGIDA) ---
+        
+        // --- ¡AQUÍ SE AÑADE 'async'! ---
+        async function processOutput(boxes, originalWidth, originalHeight) {
             const validBoxes = [];
             const validScores = [];
             const validClasses = [];
@@ -196,13 +196,8 @@
             const scaleX = originalWidth / 640;
             const scaleY = originalHeight / 640;
 
-            // 'boxes' tiene la forma [8400, 10] (4 de caja + 6 de clases)
             for (let i = 0; i < boxes.length; i++) {
                 const boxData = boxes[i];
-                
-                // --- LÓGICA CORREGIDA ---
-                // No hay 'objectness score'. Simplemente encontramos
-                // la clase con el puntaje más alto.
                 
                 let maxClassScore = 0;
                 let classId = -1;
@@ -211,36 +206,59 @@
                 for (let j = 4; j < boxData.length; j++) {
                     if (boxData[j] > maxClassScore) {
                         maxClassScore = boxData[j];
-                        classId = j - 4; // j=4 -> id=0, j=5 -> id=1, etc.
+                        classId = j - 4; // j=4 -> id=0
                     }
                 }
 
-                // Usamos el 'scoreThreshold' que definimos (0.25)
-                // Si el mejor puntaje de clase no es suficiente, lo descartamos.
+                // --- SE USA EL UMBRAL DE 'scoreThreshold' (ej. 0.2) ---
                 if (maxClassScore < scoreThreshold) {
                     continue;
                 }
                 
-                // Si llegamos aquí, ¡es una detección válida!
                 const finalScore = maxClassScore;
                 
-                // Coordenadas [cx, cy, w, h]
                 const cx = boxData[0] * scaleX;
                 const cy = boxData[1] * scaleY;
                 const w = boxData[2] * scaleX;
                 const h = boxData[3] * scaleY;
 
-                // Convertir a [x1, y1, x2, y2]
                 const x1 = cx - w / 2;
                 const y1 = cy - h / 2;
                 const x2 = cx + w / 2;
                 const y2 = cy + h / 2;
 
-                validBoxes.push([y1, x1, y2, x2]); // TF.js NMS usa [y1, x1, y2, x2]
+                validBoxes.push([y1, x1, y2, x2]);
                 validScores.push(finalScore);
                 validClasses.push(classId);
             }
 
+            if (validBoxes.length === 0) {
+                return [[], [], []];
+            }
+
+            // --- ¡AQUÍ SE USA 'await' Y '...Async'! ---
+            const nmsResult = await tf.image.nonMaxSuppressionAsync(
+                validBoxes,
+                validScores,
+                10,    // max_output_size
+                0.5,   // iou_threshold
+                scoreThreshold // <-- ¡Y AQUÍ SE USA LA VARIABLE!
+            );
+
+            const nmsIndices = nmsResult.arraySync();
+            
+            const finalBoxes = [];
+            const finalScores = [];
+            const finalClasses = [];
+
+            for (const index of nmsIndices) {
+                finalBoxes.push(validBoxes[index]);
+                finalScores.push(validScores[index]);
+                finalClasses.push(validClasses[index]);
+            }
+
+            return [finalBoxes, finalScores, finalClasses];
+        }
             // --- FIN DE LA LÓGICA CORREGIDA ---
 
             // Si no encontramos ninguna caja, devolvemos listas vacías.
