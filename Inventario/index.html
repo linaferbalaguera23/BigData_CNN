@@ -102,7 +102,7 @@
         // Ruta al modelo que descargaste
         // Ajusta 'best_web_model' si tu carpeta se llama diferente
         const modelPath = 'best_web_model/model.json';
-        const scoreThreshold = 0.25; // Confianza mínima para mostrar un objeto (puedes ajustarlo)
+        const scoreThreshold = 0.2; // Confianza mínima para mostrar un objeto (puedes ajustarlo)
 
         // --- 1. Cargar el Modelo (CON FORZADO DE GPU) ---
         let model;
@@ -248,13 +248,13 @@
                 return [[], [], []];
             }
 
-            // Non-Max Suppression (NMS) para eliminar cajas duplicadas
-            const nmsResult = tf.image.nonMaxSuppression(
+            // Non-Max Suppression (NMS)
+            const nmsResult = await tf.image.nonMaxSuppressionAsync(
                 validBoxes,
                 validScores,
                 10,    // max_output_size
                 0.5,   // iou_threshold
-                0.4    // score_threshold
+                scoreThreshold // 
             );
 
             const nmsIndices = nmsResult.arraySync();
