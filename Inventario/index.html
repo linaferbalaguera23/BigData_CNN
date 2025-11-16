@@ -72,7 +72,7 @@
     <div class="container">
         <h2>1. Cargar Imagen del Salón</h2>
         <p>Sube un archivo .jpg para analizar:</p>
-        <input type="file" id="imageUpload" accept=".jpg, .jpeg">
+        <input type="file" id="imageUpload" accept=".jpg, .jpeg" disabled>
 
         <div id="loader">Procesando imagen con IA... (Esto es 100% local)</div>
 
@@ -105,20 +105,37 @@
         // (Ajustado a 0.2 para ser más permisivo con las detecciones)
         const scoreThreshold = 0.2; 
 
-        // --- 1. Cargar el Modelo (CON FORZADO DE GPU) ---
+       // --- 1. Cargar el Modelo (CON FORZADO DE GPU) ---
         let model;
         (async () => {
             console.log("Iniciando TensorFlow.js...");
+            
+            // --- ¡AÑADIDO! ---
+            // Obtenemos los elementos de la UI
+            const loader = document.getElementById('loader');
+            const imageUpload = document.getElementById('imageUpload');
+            
+            // --- ¡AÑADIDO! ---
+            // Actualizamos el estado para el usuario
+            loader.style.display = 'block';
+            loader.innerText = 'Cargando modelo de IA (6.3 MB)...';
             
             // Forzamos el backend a WebGL (usar la GPU) para alta velocidad
             await tf.setBackend('webgl');
             await tf.ready();
             
-            console.log("Backend actual:", tf.getBackend()); // Verificación
+            console.log("Backend actual:", tf.getBackend());
 
             console.log("Cargando modelo...");
             model = await tf.loadGraphModel(modelPath);
             console.log("Modelo cargado exitosamente.");
+
+            // --- ¡AÑADIDO! ---
+            // El modelo está listo, actualizamos la UI
+            loader.innerText = '¡Modelo listo! Sube una imagen.';
+            loader.style.display = 'none'; // Ocultamos el loader
+            imageUpload.disabled = false; // ¡Activamos el botón de subir!
+
         })();
 
         // --- 2. Manejar la Carga de Imagen ---
