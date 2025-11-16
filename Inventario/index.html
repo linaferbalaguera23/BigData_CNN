@@ -88,8 +88,7 @@
     <script>
         // --- 0. Configuración del Proyecto ---
         
-        // Nombres de las clases (basado en el label_map.pbtxt y el .yaml)
-        // ¡IMPORTANTE! El ID '0' de YOLO corresponde al primer ítem, '1' al segundo, etc.
+        // Nombres de las clases
         const classNames = {
             0: "CPU",
             1: "Mesa",
@@ -99,20 +98,21 @@
             5: "Teclado"
         };
         
-        // Ruta al modelo que descargaste
-        // Ajusta 'best_web_model' si tu carpeta se llama diferente
+        // Ruta al modelo
         const modelPath = 'best_web_model/model.json';
-        const scoreThreshold = 0.2; // Confianza mínima para mostrar un objeto (puedes ajustarlo)
+        
+        // UMBRAL DE CONFIANZA
+        // (Ajustado a 0.2 para ser más permisivo con las detecciones)
+        const scoreThreshold = 0.2; 
 
         // --- 1. Cargar el Modelo (CON FORZADO DE GPU) ---
         let model;
         (async () => {
             console.log("Iniciando TensorFlow.js...");
             
-            // --- ¡AÑADIDO! ---
-            // Forzamos el backend a WebGL (usar la GPU)
+            // Forzamos el backend a WebGL (usar la GPU) para alta velocidad
             await tf.setBackend('webgl');
-            await tf.ready(); // Esperamos a que la GPU esté lista
+            await tf.ready();
             
             console.log("Backend actual:", tf.getBackend()); // Verificación
 
@@ -149,7 +149,8 @@
             reader.readAsDataURL(file);
         }
 
-      // --- 3. Ejecutar la Inferencia (La Magia) ---
+        // --- 3. Ejecutar la Inferencia (La Magia) ---
+        // (Marcada como 'async' para usar 'await' adentro)
         async function runPrediction(img) {
             const tfImg = tf.browser.fromPixels(img);
             const originalWidth = tfImg.shape[1];
@@ -164,7 +165,7 @@
             
             // Post-procesamiento
             const output = predictions.squeeze();
-            const transposed_output = output.transpose(); 
+            const transposed_output = output.transpose(); // Corregir formato
             const boxes = await transposed_output.array();
 
             tfImg.dispose();
@@ -174,8 +175,7 @@
             output.dispose();
             transposed_output.dispose();
 
-            // --- ¡AQUÍ SE AÑADE 'await'! ---
-            // Esto es necesario porque processOutput ahora es async
+            // 'await' es necesario porque processOutput ahora es 'async'
             const [detectedBoxes, scores, classes] = await processOutput(boxes, originalWidth, originalHeight);
             
             // Dibujar resultados
@@ -187,7 +187,7 @@
 
         // --- 4. Post-procesamiento (VERSIÓN FINAL ASÍNCRONA Y CORREGIDA) ---
         
-        // --- ¡AQUÍ SE AÑADE 'async'! ---
+        // 'async' añadido aquí para usar 'await' adentro
         async function processOutput(boxes, originalWidth, originalHeight) {
             const validBoxes = [];
             const validScores = [];
@@ -202,7 +202,7 @@
                 let maxClassScore = 0;
                 let classId = -1;
 
-                // Las clases empiezan en el índice 4
+                // Lógica de YOLOv8: las clases empiezan en el índice 4
                 for (let j = 4; j < boxData.length; j++) {
                     if (boxData[j] > maxClassScore) {
                         maxClassScore = boxData[j];
@@ -210,7 +210,7 @@
                     }
                 }
 
-                // --- SE USA EL UMBRAL DE 'scoreThreshold' (ej. 0.2) ---
+                // Usamos el umbral de confianza (0.2)
                 if (maxClassScore < scoreThreshold) {
                     continue;
                 }
@@ -232,17 +232,18 @@
                 validClasses.push(classId);
             }
 
+            // Corrección de bug: si no hay cajas, no ejecutar NMS
             if (validBoxes.length === 0) {
                 return [[], [], []];
             }
 
-            // --- ¡AQUÍ SE USA 'await' Y '...Async'! ---
+            // NMS Asíncrono (para no bloquear la UI)
             const nmsResult = await tf.image.nonMaxSuppressionAsync(
                 validBoxes,
                 validScores,
                 10,    // max_output_size
                 0.5,   // iou_threshold
-                scoreThreshold // <-- ¡Y AQUÍ SE USA LA VARIABLE!
+                scoreThreshold // Corrección de bug: usar la variable
             );
 
             const nmsIndices = nmsResult.arraySync();
@@ -265,43 +266,32 @@
             const canvas = document.getElementById('resultCanvas');
             const ctx = canvas.getContext('2d');
             
-            // Ajustar tamaño del canvas a la imagen
             canvas.width = img.width;
             canvas.height = img.height;
-
-            // Dibujar la imagen original
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            // Dibujar las cajas
             for (let i = 0; i < boxes.length; i++) {
                 const box = boxes[i]; // [y1, x1, y2, x2]
                 const classId = classes[i];
-                const score = scores[i].toFixed(2);
                 
                 const [y1, x1, y2, x2] = box;
                 const w = x2 - x1;
                 const h = y2 - y1;
-                const label = classNames[classId] || 'Desconocido';
 
                 // --- Requisitos del Proyecto ---
-                // Color: Azul
-                // Texto: Número correspondiente (ID)
-                
                 ctx.strokeStyle = 'blue';
                 ctx.lineWidth = 3;
                 ctx.fillStyle = 'blue';
                 ctx.font = '18px Arial';
 
-                // Dibujar la caja
                 ctx.strokeRect(x1, y1, w, h);
                 
-                // Dibujar el texto con el ID de la clase
-                const text = `${classId}`; // El requisito pide el NÚMERO
+                const text = `${classId}`; // ID numérico
                 const textWidth = ctx.measureText(text).width;
                 const textHeight = 18;
                 
                 ctx.fillRect(x1 - 1, y1 - textHeight - 2, textWidth + 6, textHeight + 4);
-                ctx.fillStyle = 'white'; // Texto blanco sobre fondo azul
+                ctx.fillStyle = 'white';
                 ctx.fillText(text, x1 + 2, y1 - 2);
             }
         }
@@ -311,19 +301,16 @@
             const countsDiv = document.getElementById('counts');
             const counts = {};
 
-            // Inicializar conteo para todas las clases
             for (const key in classNames) {
                 counts[key] = 0;
             }
 
-            // Contar las clases detectadas
             for (const classId of classes) {
                 if (counts.hasOwnProperty(classId)) {
                     counts[classId]++;
                 }
             }
 
-            // Formatear la salida
             let html = '<ul>';
             for (const key in counts) {
                 html += `<li><b>${classNames[key]} (ID: ${key}):</b> ${counts[key]}</li>`;
