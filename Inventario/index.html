@@ -110,17 +110,15 @@
         (async () => {
             console.log("Iniciando TensorFlow.js...");
             
-            // --- ¡AÑADIDO! ---
-            // Obtenemos los elementos de la UI
+            
             const loader = document.getElementById('loader');
             const imageUpload = document.getElementById('imageUpload');
             
-            // --- ¡AÑADIDO! ---
-            // Actualizamos el estado para el usuario
+            
+            
             loader.style.display = 'block';
             loader.innerText = 'Cargando modelo de IA (6.3 MB)...';
             
-            // Forzamos el backend a WebGL (usar la GPU) para alta velocidad
             await tf.setBackend('webgl');
             await tf.ready();
             
@@ -130,8 +128,7 @@
             model = await tf.loadGraphModel(modelPath);
             console.log("Modelo cargado exitosamente.");
 
-            // --- ¡AÑADIDO! ---
-            // El modelo está listo, actualizamos la UI
+        
             loader.innerText = '¡Modelo listo! Sube una imagen.';
             loader.style.display = 'none'; // Ocultamos el loader
             imageUpload.disabled = false; // ¡Activamos el botón de subir!
@@ -166,8 +163,7 @@
             reader.readAsDataURL(file);
         }
 
-        // --- 3. Ejecutar la Inferencia (La Magia) ---
-        // (Marcada como 'async' para usar 'await' adentro)
+        // --- 3. Ejecutar la Inferencia (Marcada como 'async' para usar 'await' adentro) --- 
         async function runPrediction(img) {
             const tfImg = tf.browser.fromPixels(img);
             const originalWidth = tfImg.shape[1];
@@ -192,19 +188,19 @@
             output.dispose();
             transposed_output.dispose();
 
-            // 'await' es necesario porque processOutput ahora es 'async'
+            
             const [detectedBoxes, scores, classes] = await processOutput(boxes, originalWidth, originalHeight);
             
-            // Dibujar resultados
+            
             drawResults(img, detectedBoxes, scores, classes);
             
             // Mostrar conteo
             displayCounts(classes);
         }
 
-        // --- 4. Post-procesamiento (VERSIÓN FINAL ASÍNCRONA Y CORREGIDA) ---
+        // --- 4. Post-procesamiento ---
         
-        // 'async' añadido aquí para usar 'await' adentro
+        
         async function processOutput(boxes, originalWidth, originalHeight) {
             const validBoxes = [];
             const validScores = [];
@@ -227,7 +223,7 @@
                     }
                 }
 
-                // Usamos el umbral de confianza (0.2)
+                
                 if (maxClassScore < scoreThreshold) {
                     continue;
                 }
@@ -249,12 +245,12 @@
                 validClasses.push(classId);
             }
 
-            // Corrección de bug: si no hay cajas, no ejecutar NMS
+            
             if (validBoxes.length === 0) {
                 return [[], [], []];
             }
 
-            // NMS Asíncrono (para no bloquear la UI)
+            
             const nmsResult = await tf.image.nonMaxSuppressionAsync(
                 validBoxes,
                 validScores,
@@ -278,7 +274,7 @@
             return [finalBoxes, finalScores, finalClasses];
         }
 
-        // --- 5. Dibujar Resultados (Cumpliendo Requisitos) ---
+        // --- 5. Dibujar Resultados  ---
         function drawResults(img, boxes, scores, classes) {
             const canvas = document.getElementById('resultCanvas');
             const ctx = canvas.getContext('2d');
@@ -295,7 +291,7 @@
                 const w = x2 - x1;
                 const h = y2 - y1;
 
-                // --- Requisitos del Proyecto ---
+                
                 ctx.strokeStyle = 'blue';
                 ctx.lineWidth = 3;
                 ctx.fillStyle = 'blue';
